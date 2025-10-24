@@ -3,12 +3,17 @@ import slotMachineResults from "./helpers/symbol_weights.js";
 import "animate.css";
 import "./App.css";
 import Reel from "./components/Reels.jsx";
-import {clearHighlights, formatCash, wait} from "./helpers/utils.js";
+import {clearHighlights, wait} from "./helpers/utils.js";
 import Spin from "./components/Spin.jsx";
 
 import soundManager from "./helpers/sounds.js";
 import countSound from "./assets/sounds/counting.wav";
 import winSound from "./assets/sounds/winning.wav";
+import spinSound from "./assets/sounds/spinning.wav";
+import symbolSound from "./assets/sounds/symbol.wav"
+import symbolSound2 from "./assets/sounds/symbol_2.wav"
+import symbolSound3 from "./assets/sounds/symbol_3.wav"
+import hit from "./assets/sounds/hit.wav"
 
 function animateCashWin(start, end, setValue, onComplete, soundManager, playSound = true) {
     const total = end - start;
@@ -88,18 +93,29 @@ export default function App() {
     const symbolHeight = 100;
 
     useEffect(() => {
-        soundManager.load("count", countSound, 0.6);
-        soundManager.load("finished", winSound, 0.7);
+        soundManager.load("count", countSound, .4);
+        soundManager.load("finished", winSound, 1);
+        soundManager.load("spinning", spinSound, 1);
+        soundManager.load("symbol", symbolSound, 1);
+        soundManager.load("symbol2", symbolSound2, 1);
+        soundManager.load("symbol3", symbolSound3, 1);
+        soundManager.load("hit", hit, 1);
     }, []);
 
-    const startSpinAnimation = (reelIndex, totalSymbols, duration) => {
+    const startSpinAnimation = (reelIndex, totalSymbols, duration, spin) => {
+        const lines = spin.results.reels.map(reel => [reel.symbols.bottom.symbol,reel.symbols.middle.symbol,reel.symbols.top.symbol])
         setDurations((prev) => Object.assign([...prev], {[reelIndex]: duration}));
         setSpinning((prev) => Object.assign([...prev], {[reelIndex]: true}));
 
         const totalScroll = totalSymbols * symbolHeight;
         setOffsets((prev) => Object.assign([...prev], {[reelIndex]: totalScroll}));
-
         const timeoutId = setTimeout(() => {
+            if(lines[reelIndex].includes("MoneyMaker")) {
+                if(reelIndex === 0) soundManager.play("symbol")
+                else if(reelIndex === 1) soundManager.play("symbol2")
+                else if(reelIndex === 2) soundManager.play("symbol3")
+            } else soundManager.play("hit")
+
             setSpinning((prev) => Object.assign([...prev], {[reelIndex]: false}));
             if (reelIndex === 2) setIsSpinComplete(true);
         }, duration);
@@ -119,12 +135,16 @@ export default function App() {
             return;
         }
 
-        setDisplayWinnings(0)
 
         if (cash < 7) {
             alert("Not enough cash to spin!");
             return;
         }
+
+        setDisplayWinnings(0)
+
+
+        soundManager.play("spinning")
 
         setCash((prev) => prev - 7);
         clearHighlights();
@@ -146,7 +166,7 @@ export default function App() {
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 totalSymbolsPerReel.forEach((count, i) =>
-                    startSpinAnimation(i, count, durationsMs[i])
+                    startSpinAnimation(i, count, durationsMs[i], spin)
                 );
             });
         });
